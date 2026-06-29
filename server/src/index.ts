@@ -1,11 +1,16 @@
 import express from "express";
 import cors from "cors";
-import { db } from "./lib/db";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./lib/auth";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+
+// Must be before express.json() — Better Auth parses its own bodies
+app.all("/api/auth/*", toNodeHandler(auth));
+
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
@@ -13,9 +18,6 @@ app.get("/api/health", (_req, res) => {
 });
 
 async function main() {
-  await db.$connect();
-  console.log("Database connected");
-
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
