@@ -31,7 +31,7 @@ export default async function globalSetup() {
   await ensureDatabaseExists(process.env.DATABASE_URL!);
 
   // Drop, recreate, and migrate the test database from scratch
-  execSync("bunx prisma migrate reset --force --skip-seed", {
+  execSync("bunx prisma migrate reset --force", {
     cwd: serverDir,
     env,
     stdio: "inherit",
