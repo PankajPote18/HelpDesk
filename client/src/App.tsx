@@ -1,9 +1,25 @@
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { LoginPage } from "./pages/LoginPage";
+import { HomePage } from "./pages/HomePage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <HomePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+]);
+
 function App() {
-  return (
-    <div>
-      <h1>Helpdesk</h1>
-    </div>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;
