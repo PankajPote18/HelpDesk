@@ -65,6 +65,55 @@ The Vite dev server proxies all `/api/*` requests to `http://localhost:3000`, so
 - `admin` — seeded at deployment; manages agent accounts
 - `agent` — created by admin; works tickets
 
+## Authentication
+
+### Library
+Better Auth (`better-auth`) with the email/password plugin. Sign-up is **disabled** — agents are created by admins only.
+
+### Server (`server/src/lib/auth.ts`)
+```ts
+export const auth = betterAuth({
+  database: prismaAdapter(db, { provider: "postgresql" }),
+  emailAndPassword: { enabled: true, disableSignUp: true },
+  trustedOrigins: ["http://localhost:5173"],
+});
+```
+
+Mounted in `server/src/index.ts` **before** `express.json()`:
+```ts
+app.all("/api/auth/*", toNodeHandler(auth));
+app.use(express.json()); // must come after
+```
+
+### Client (`client/src/lib/auth-client.ts`)
+```ts
+import { createAuthClient } from "better-auth/react";
+export const authClient = createAuthClient({ baseURL: "http://localhost:3000" });
+```
+
+The client points directly at the Express server (`http://localhost:3000`), not through the Vite proxy, because Better Auth needs to set cookies on the correct origin.
+
+### Usage patterns
+```ts
+// Check session (React hook)
+const { data: session, isPending } = authClient.useSession();
+
+// Sign in
+await authClient.signIn.email(
+  { email, password },
+  { onSuccess: () => navigate("/"), onError: (ctx) => setError(ctx.error.message) }
+);
+
+// Sign out
+await authClient.signOut();
+```
+
+### Protected routes
+`client/src/components/ProtectedRoute.tsx` wraps pages that require login. It checks `isPending` before `!session` to avoid a flash-redirect on first render.
+
+### Known issue
+Logging in currently returns **"Invalid input: expected string, received undefined"** from the server. This is a zod v4 validation error triggered inside Better Auth — the server receives undefined for the email/password fields despite the client constructing the request correctly. Root cause not yet confirmed (suspected: Bun + `toNodeHandler` body stream reading incompatibility, or server/client version mismatch: server uses `better-auth@1.6.22`, client uses `1.6.23`).
+
 ## Key Conventions
 
 - All API routes are prefixed with `/api`
