@@ -6,7 +6,17 @@ import { auth } from "./lib/auth";
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
 
 // Must be before express.json() — Better Auth parses its own bodies
 app.all("/api/auth/*", toNodeHandler(auth));
