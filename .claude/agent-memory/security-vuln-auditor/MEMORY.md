@@ -1,0 +1,1 @@
+- [Auth/RBAC Review State](auth-review-state.md) — 2026-06-30 review: trustedOrigins mismatch, missing server auth middleware, hardcoded seed creds, client-only admin guard
