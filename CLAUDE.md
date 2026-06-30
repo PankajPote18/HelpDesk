@@ -174,27 +174,12 @@ Both scripts read credentials from env vars and **throw** if the password var is
 
 ## E2E Testing
 
-Playwright is configured at the workspace root. Tests live in `e2e/tests/`.
+Use the **`playwright-e2e-writer` agent** to write, extend, or update Playwright tests. It has full context on the test infrastructure, credentials, conventions, and project-specific patterns.
 
 ```bash
 bun run test:e2e       # headless
 bun run test:e2e:ui    # interactive UI mode
 ```
-
-Before each test run, `e2e/global-setup.ts` automatically:
-1. Creates the `helpdesk_test` database if it doesn't exist
-2. Runs `prisma migrate reset --force` for a clean slate
-3. Seeds known test users
-
-The server runs against `helpdesk_test` during tests because Playwright passes `NODE_ENV: "test"` to the server process, and Bun auto-loads `server/.env.test` when `NODE_ENV=test`.
-
-**Test credentials:**
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@test.com` | `TestAdmin1!` |
-| Agent | `agent@test.com` | `TestAgent1!` |
-
-Never test against the dev `helpdesk` database.
 
 ## Key Conventions
 
