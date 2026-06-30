@@ -17,6 +17,7 @@ An AI-powered ticket management system. Support emails arrive, get turned into t
 | Email | SendGrid or Mailgun |
 | Styling | Tailwind CSS |
 | Routing | React Router |
+| E2E Testing | Playwright |
 | Deployment | Docker |
 
 ## Project Structure
@@ -25,10 +26,26 @@ An AI-powered ticket management system. Support emails arrive, get turned into t
 helpdesk/
 ├── CLAUDE.md
 ├── package.json          # Bun workspace root
+├── playwright.config.ts  # E2E test config
 ├── bun.lock
+├── e2e/                  # Playwright tests
+│   ├── global-setup.ts   # DB reset + seed before test runs
+│   └── tests/            # Test files go here
 ├── server/               # Express API
 │   ├── src/
-│   │   └── index.ts      # Entry point
+│   │   ├── index.ts      # Entry point
+│   │   ├── lib/
+│   │   │   ├── auth.ts   # Better Auth config
+│   │   │   └── db.ts     # Prisma client
+│   │   ├── middleware/
+│   │   │   └── auth.ts   # requireAuth, requireAdmin
+│   │   └── scripts/
+│   │       ├── seed.ts        # Seeds admin user
+│   │       └── seed-agent.ts  # Seeds agent user
+│   ├── prisma/
+│   │   └── schema.prisma
+│   ├── .env              # Dev secrets (gitignored)
+│   ├── .env.test         # Test DB config (gitignored)
 │   ├── package.json
 │   └── tsconfig.json
 └── client/               # React SPA
@@ -74,10 +91,17 @@ Better Auth (`better-auth`) with the email/password plugin. Sign-up is **disable
 ```ts
 export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
-  emailAndPassword: { enabled: true, disableSignUp: true },
-  trustedOrigins: ["http://localhost:5173"],
+  emailAndPassword: { enabled: true, disableSignUp: true, minPasswordLength: 8 },
+  trustedOrigins: ["http://localhost:5173", "http://localhost:5174"],
+  user: {
+    additionalFields: {
+      role: { type: "string", required: true, defaultValue: "agent", input: false },
+    },
+  },
 });
 ```
+
+Both ports are listed because Vite defaults to 5173 but falls back to 5174 if occupied. `input: false` on `role` prevents users from self-escalating via the auth API.
 
 Mounted in `server/src/index.ts` **before** `express.json()`:
 ```ts
@@ -88,10 +112,12 @@ app.use(express.json()); // must come after
 ### Client (`client/src/lib/auth-client.ts`)
 ```ts
 import { createAuthClient } from "better-auth/react";
-export const authClient = createAuthClient({ baseURL: "http://localhost:3000" });
+export const authClient = createAuthClient({
+  baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:3000",
+});
 ```
 
-The client points directly at the Express server (`http://localhost:3000`), not through the Vite proxy, because Better Auth needs to set cookies on the correct origin.
+The client points directly at the Express server, not through the Vite proxy, because Better Auth needs to set cookies on the correct origin.
 
 ### Usage patterns
 ```ts
@@ -111,14 +137,70 @@ await authClient.signOut();
 ### Protected routes
 `client/src/components/ProtectedRoute.tsx` wraps pages that require login. It checks `isPending` before `!session` to avoid a flash-redirect on first render.
 
-### Known issue
-Logging in currently returns **"Invalid input: expected string, received undefined"** from the server. This is a zod v4 validation error triggered inside Better Auth — the server receives undefined for the email/password fields despite the client constructing the request correctly. Root cause not yet confirmed (suspected: Bun + `toNodeHandler` body stream reading incompatibility, or server/client version mismatch: server uses `better-auth@1.6.22`, client uses `1.6.23`).
+`client/src/components/AdminRoute.tsx` additionally checks `session.user.role === "admin"`. This is a UX guard only — all admin API routes must also be protected server-side.
+
+## Auth Middleware
+
+`server/src/middleware/auth.ts` exports two middleware functions:
+
+```ts
+import { requireAuth, requireAdmin } from "./middleware/auth";
+
+// Protect all routes in a router
+app.use("/api/tickets", requireAuth, ticketRouter);
+
+// Admin-only routes
+app.use("/api/users", requireAuth, requireAdmin, userRouter);
+```
+
+- `requireAuth` — validates the session, attaches it to `res.locals.session`, returns 401 if missing
+- `requireAdmin` — checks `role === "admin"`, returns 403 otherwise; reuses session from `res.locals` if already fetched
+
+**Every new API route must use one of these.** The client-side guards are UX only.
+
+## Seed Scripts
+
+```bash
+bun run db:seed        # creates admin user
+bun run db:seed-agent  # creates agent user
+```
+
+Both scripts read credentials from env vars and **throw** if the password var is unset — there are no hardcoded fallbacks.
+
+| Script | Env vars required |
+|---|---|
+| `seed.ts` | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` |
+| `seed-agent.ts` | `SEED_AGENT_EMAIL`, `SEED_AGENT_PASSWORD` |
+
+## E2E Testing
+
+Playwright is configured at the workspace root. Tests live in `e2e/tests/`.
+
+```bash
+bun run test:e2e       # headless
+bun run test:e2e:ui    # interactive UI mode
+```
+
+Before each test run, `e2e/global-setup.ts` automatically:
+1. Creates the `helpdesk_test` database if it doesn't exist
+2. Runs `prisma migrate reset --force` for a clean slate
+3. Seeds known test users
+
+The server runs against `helpdesk_test` during tests because Playwright passes `NODE_ENV: "test"` to the server process, and Bun auto-loads `server/.env.test` when `NODE_ENV=test`.
+
+**Test credentials:**
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@test.com` | `TestAdmin1!` |
+| Agent | `agent@test.com` | `TestAgent1!` |
+
+Never test against the dev `helpdesk` database.
 
 ## Key Conventions
 
 - All API routes are prefixed with `/api`
 - Auth uses database-backed sessions (not JWT)
-- Role-based access: admin-only routes are protected at the middleware level
+- Every API route must be wrapped with `requireAuth`; admin routes additionally with `requireAdmin`
 - TypeScript strict mode is enabled in both workspaces
 
 ## Documentation
