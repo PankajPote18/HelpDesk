@@ -1,7 +1,9 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { LoginPage } from "@/pages/LoginPage";
 import { HomePage } from "@/pages/HomePage";
+import { UsersPage } from "@/pages/UsersPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 
 const router = createBrowserRouter([
   {
@@ -10,6 +12,14 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <HomePage />
       </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/users",
+    element: (
+      <AdminRoute>
+        <UsersPage />
+      </AdminRoute>
     ),
   },
   {
