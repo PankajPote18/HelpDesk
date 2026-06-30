@@ -8,6 +8,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["bun-types", "node"],
+    "rootDir": "src",
     "outDir": "dist"
   },
   "include": ["src"]
