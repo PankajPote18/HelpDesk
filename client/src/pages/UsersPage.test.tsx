@@ -11,6 +11,7 @@ vi.mock("axios", () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
+    patch: vi.fn(),
     delete: vi.fn(),
     isAxiosError: vi.fn(),
   },
@@ -221,15 +222,59 @@ describe("UsersPage", () => {
 
   // ── Delete user ──────────────────────────────────────────────────────────
 
+  it("opens the delete confirmation modal when clicking Delete", async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    expect(screen.getByRole("heading", { name: /delete user/i })).toBeInTheDocument();
+    expect(screen.getByText(AGENT.name, { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("closes the delete modal when clicking Cancel", async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    const modal = screen.getByRole("heading", { name: /delete user/i }).closest("div")!;
+    await user.click(within(modal).getByRole("button", { name: /cancel/i }));
+
+    expect(screen.queryByRole("heading", { name: /delete user/i })).not.toBeInTheDocument();
+    expect(vi.mocked(axios.delete)).not.toHaveBeenCalled();
+  });
+
+  it("closes the delete modal when clicking the backdrop", async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    const backdrops = document.querySelectorAll(".fixed.inset-0");
+    await user.click(backdrops[backdrops.length - 1] as HTMLElement);
+
+    expect(screen.queryByRole("heading", { name: /delete user/i })).not.toBeInTheDocument();
+    expect(vi.mocked(axios.delete)).not.toHaveBeenCalled();
+  });
+
   it("removes the user from the table after confirming deletion", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
     vi.mocked(axios.delete).mockResolvedValue({});
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Agent Smith");
+    await screen.findByText("agent@example.com");
     await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    const modal = screen.getByRole("heading", { name: /delete user/i }).closest("div")!;
+    await user.click(within(modal).getByRole("button", { name: /^delete$/i }));
 
     expect(vi.mocked(axios.delete)).toHaveBeenCalledWith(
       `/api/users/${AGENT.id}`,
@@ -238,18 +283,161 @@ describe("UsersPage", () => {
     await waitFor(() => {
       expect(screen.queryByText("Agent Smith")).not.toBeInTheDocument();
     });
+    expect(screen.queryByRole("heading", { name: /delete user/i })).not.toBeInTheDocument();
   });
 
-  it("does not delete the user when confirmation is cancelled", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("shows a server error inside the delete modal when deletion fails", async () => {
+    const err = {
+      isAxiosError: true,
+      response: { data: { error: "Cannot delete your own account" } },
+    };
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    vi.mocked(axios.delete).mockRejectedValue(err);
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    const modal = screen.getByRole("heading", { name: /delete user/i }).closest("div")!;
+    await user.click(within(modal).getByRole("button", { name: /^delete$/i }));
+
+    expect(
+      await within(modal).findByText(/cannot delete your own account/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /delete user/i })).toBeInTheDocument();
+  });
+
+  // ── Edit user ────────────────────────────────────────────────────────────
+
+  it("opens the edit modal pre-populated with user data", async () => {
     vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
     const user = userEvent.setup();
     renderPage();
 
-    await screen.findByText("Agent Smith");
-    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: `Edit ${AGENT.name}` }));
 
-    expect(vi.mocked(axios.delete)).not.toHaveBeenCalled();
-    expect(screen.getByText("Agent Smith")).toBeInTheDocument();
+    const modal = screen.getByRole("heading", { name: /edit user/i }).closest("div")!;
+    expect(within(modal).getByLabelText(/^name$/i)).toHaveValue(AGENT.name);
+    expect(within(modal).getByLabelText(/^email$/i)).toHaveValue(AGENT.email);
+    expect(within(modal).getByLabelText(/new password/i)).toHaveValue("");
+  });
+
+  it("closes the edit modal when clicking Cancel", async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: `Edit ${AGENT.name}` }));
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+    expect(screen.queryByRole("heading", { name: /edit user/i })).not.toBeInTheDocument();
+  });
+
+  it("closes the edit modal when clicking the backdrop", async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: `Edit ${AGENT.name}` }));
+
+    const backdrop = document.querySelector(".fixed.inset-0") as HTMLElement;
+    await user.click(backdrop);
+
+    expect(screen.queryByRole("heading", { name: /edit user/i })).not.toBeInTheDocument();
+  });
+
+  it("shows a validation error when the new password is too short", async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: `Edit ${AGENT.name}` }));
+
+    const modal = screen.getByRole("heading", { name: /edit user/i }).closest("div")!;
+    await user.type(within(modal).getByLabelText(/new password/i), "short");
+    await user.click(within(modal).getByRole("button", { name: /save changes/i }));
+
+    expect(
+      await within(modal).findByText(/password must be at least 8 characters/i)
+    ).toBeInTheDocument();
+    expect(vi.mocked(axios.patch)).not.toHaveBeenCalled();
+  });
+
+  it("updates name and email and closes the modal on success", async () => {
+    const updated = { ...AGENT, name: "Updated Name", email: "updated@example.com" };
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    vi.mocked(axios.patch).mockResolvedValue({ data: updated });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: `Edit ${AGENT.name}` }));
+
+    const modal = screen.getByRole("heading", { name: /edit user/i }).closest("div")!;
+    await user.clear(within(modal).getByLabelText(/^name$/i));
+    await user.type(within(modal).getByLabelText(/^name$/i), "Updated Name");
+    await user.clear(within(modal).getByLabelText(/^email$/i));
+    await user.type(within(modal).getByLabelText(/^email$/i), "updated@example.com");
+    await user.click(within(modal).getByRole("button", { name: /save changes/i }));
+
+    expect(vi.mocked(axios.patch)).toHaveBeenCalledWith(
+      `/api/users/${AGENT.id}`,
+      expect.objectContaining({ name: "Updated Name", email: "updated@example.com", password: "" }),
+      expect.objectContaining({ withCredentials: true })
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: /edit user/i })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Updated Name")).toBeInTheDocument();
+    expect(screen.getByText("updated@example.com")).toBeInTheDocument();
+  });
+
+  it("includes the new password in the request when provided", async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    vi.mocked(axios.patch).mockResolvedValue({ data: AGENT });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: `Edit ${AGENT.name}` }));
+
+    const modal = screen.getByRole("heading", { name: /edit user/i }).closest("div")!;
+    await user.type(within(modal).getByLabelText(/new password/i), "newpassword123");
+    await user.click(within(modal).getByRole("button", { name: /save changes/i }));
+
+    expect(vi.mocked(axios.patch)).toHaveBeenCalledWith(
+      `/api/users/${AGENT.id}`,
+      expect.objectContaining({ password: "newpassword123" }),
+      expect.objectContaining({ withCredentials: true })
+    );
+  });
+
+  it("shows a server error inside the modal when the edit fails", async () => {
+    const err = {
+      isAxiosError: true,
+      response: { data: { error: "A user with that email already exists" } },
+    };
+    vi.mocked(axios.get).mockResolvedValue({ data: [AGENT] });
+    vi.mocked(axios.patch).mockRejectedValue(err);
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("agent@example.com");
+    await user.click(screen.getByRole("button", { name: `Edit ${AGENT.name}` }));
+
+    const modal = screen.getByRole("heading", { name: /edit user/i }).closest("div")!;
+    await user.click(within(modal).getByRole("button", { name: /save changes/i }));
+
+    expect(
+      await within(modal).findByText(/a user with that email already exists/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /edit user/i })).toBeInTheDocument();
   });
 });

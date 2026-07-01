@@ -204,11 +204,11 @@ core/
 └── src/
     ├── index.ts          # re-exports everything
     └── schemas/
-        └── user.ts       # createUserSchema, CreateUserInput
+        └── user.ts       # createUserSchema, CreateUserInput, editUserSchema, EditUserInput
 ```
 
 ### Adding a new schema
-1. Create `core/src/schemas/<domain>.ts` and export the schema + its inferred type
+1. Create `core/src/schemas/<domain>.ts`, export the schema(s) and their inferred types
 2. Re-export from `core/src/index.ts`
 3. Import on the **server**: `import { mySchema } from "@helpdesk/core"`
 4. Import on the **client**: same — the Vite alias `"@helpdesk/core" → ../core/src/index.ts` and the matching tsconfig path handle resolution without an npm publish step
