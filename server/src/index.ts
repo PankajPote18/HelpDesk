@@ -3,7 +3,9 @@ import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
 import { requireAuth, requireAdmin } from "./middleware/auth";
+import { requireWebhookSecret } from "./middleware/webhook";
 import usersRouter from "./routes/users";
+import inboundEmailRouter from "./routes/inbound-email";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -21,7 +23,7 @@ app.use(
 );
 
 // Must be before express.json() — Better Auth parses its own bodies
-app.all("/api/auth/*", toNodeHandler(auth));
+app.all("/api/auth/{*any}", toNodeHandler(auth));
 
 app.use(express.json());
 
@@ -30,6 +32,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/users", requireAuth, requireAdmin, usersRouter);
+app.use("/api/webhooks/inbound-email", requireWebhookSecret, inboundEmailRouter);
 
 // Express 5 automatically forwards rejected async route promises to next(err).
 // This handler ensures those errors are returned as JSON rather than HTML.

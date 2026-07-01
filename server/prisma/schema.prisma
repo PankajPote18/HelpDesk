@@ -81,13 +81,18 @@ model Verification {
 }
 
 model Ticket {
-  id           String          @id @default(cuid())
-  subject      String
-  body         String
-  status       TicketStatus    @default(open)
-  category     TicketCategory?
-  assignedTo   User?           @relation(fields: [assignedToId], references: [id])
-  assignedToId String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id             String          @id @default(cuid())
+  subject        String
+  body           String
+  status         TicketStatus    @default(open)
+  category       TicketCategory?
+  requesterEmail String
+  requesterName  String?
+  messageId      String?         @unique
+  assignedTo     User?           @relation(fields: [assignedToId], references: [id])
+  assignedToId   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([requesterEmail])
 }

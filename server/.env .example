@@ -6,3 +6,5 @@
 # See the documentation for all the connection string options: https://pris.ly/d/connection-strings
 
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/helpdesk?schema=public"
+
+INBOUND_EMAIL_WEBHOOK_SECRET="replace-with-a-random-32-plus-character-secret"
