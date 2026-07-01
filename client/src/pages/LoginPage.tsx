@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -38,7 +39,19 @@ export function LoginPage() {
   if (isPending) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <div className="w-full max-w-md mx-4 rounded-xl border bg-card shadow-sm p-6 space-y-4">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-64" />
+          <div className="space-y-2 pt-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+          <Skeleton className="h-9 w-full" />
+        </div>
       </div>
     );
   }

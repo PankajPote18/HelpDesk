@@ -17,7 +17,9 @@ export function Navbar() {
   return (
     <nav className="bg-card border-b border-border px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-6">
-        <span className="text-lg font-semibold">Helpdesk</span>
+        <Link to="/" className="text-lg font-semibold hover:opacity-80 transition-opacity">
+            Helpdesk
+          </Link>
         {role === "admin" && (
           <Link
             to="/users"

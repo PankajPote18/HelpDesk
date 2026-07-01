@@ -9,7 +9,7 @@ An AI-powered ticket management system. Support emails arrive, get turned into t
 | Layer | Technology |
 |---|---|
 | Runtime & package manager | Bun |
-| Backend | Express + TypeScript |
+| Backend | Express 5 + TypeScript |
 | Frontend | React + TypeScript + Vite |
 | Database | PostgreSQL |
 | ORM | Prisma |
@@ -17,6 +17,8 @@ An AI-powered ticket management system. Support emails arrive, get turned into t
 | Email | SendGrid or Mailgun |
 | Styling | Tailwind CSS |
 | Routing | React Router |
+| HTTP client | Axios |
+| Server state | TanStack Query (`@tanstack/react-query`) |
 | E2E Testing | Playwright |
 | Deployment | Docker |
 
@@ -186,7 +188,153 @@ bun run test:e2e:ui    # interactive UI mode
 - All API routes are prefixed with `/api`
 - Auth uses database-backed sessions (not JWT)
 - Every API route must be wrapped with `requireAuth`; admin routes additionally with `requireAdmin`
+- **Do not wrap route handlers in try/catch.** Express 5 automatically forwards rejected async promises to the error handler. A global JSON error handler in `server/src/index.ts` converts these to `{ error: "..." }` responses with the appropriate status code
 - TypeScript strict mode is enabled in both workspaces
+- **HTTP requests** use `axios` with `withCredentials: true` on every call (session cookie must be forwarded)
+- **Server state** (fetching, caching, mutations) uses TanStack Query — `useQuery` for reads, `useMutation` for writes; update the cache via `queryClient.setQueryData` on mutation success instead of refetching where possible
+- `QueryClientProvider` is mounted in `client/src/main.tsx`; do not create additional `QueryClient` instances
+
+## Shared Code (`core` package)
+
+The `core/` workspace package (`@helpdesk/core`) holds code that must stay identical on both client and server — primarily Zod schemas. Never duplicate a schema; define it once in `core` and import it everywhere.
+
+### Structure
+```
+core/
+└── src/
+    ├── index.ts          # re-exports everything
+    └── schemas/
+        └── user.ts       # createUserSchema, CreateUserInput
+```
+
+### Adding a new schema
+1. Create `core/src/schemas/<domain>.ts` and export the schema + its inferred type
+2. Re-export from `core/src/index.ts`
+3. Import on the **server**: `import { mySchema } from "@helpdesk/core"`
+4. Import on the **client**: same — the Vite alias `"@helpdesk/core" → ../core/src/index.ts` and the matching tsconfig path handle resolution without an npm publish step
+
+### Client form integration
+On the client, pair the shared schema with `react-hook-form` + `zodResolver`:
+
+```ts
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createUserSchema, type CreateUserInput } from "@helpdesk/core";
+
+const { register, handleSubmit, formState: { errors }, reset } = useForm<CreateUserInput>({
+  resolver: zodResolver(createUserSchema),
+});
+
+// In JSX:
+<Input {...register("email")} />
+{errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+```
+
+This guarantees the client validates with exactly the same rules as the server — one source of truth.
+
+## Validation
+
+**Zod is used for all request body validation on the server.** Define a schema at the top of each route file and call `safeParse` at the start of any handler that accepts a body:
+
+```ts
+import { z } from "zod";
+
+const createUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+router.post("/", async (req, res) => {
+  const result = createUserSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error.errors[0].message });
+  }
+  const { name, email, password } = result.data; // fully typed
+  // ...
+});
+```
+
+- Always use `safeParse` (not `parse`) so validation errors are handled without throwing
+- Return the first error message as `{ error: "..." }` with a 400 status
+- Zod is a dependency of `@helpdesk/core`; both client and server inherit it transitively — do not add a separate `zod` dependency to client or server unless a schema genuinely cannot live in `core`
+
+## Enums
+
+Prisma generates enum objects and types in `server/src/generated/prisma/enums.ts`. Always import from there instead of using raw strings:
+
+```ts
+import { Role, TicketStatus, TicketCategory } from "../generated/prisma/enums";
+
+// ✅
+role: Role.agent
+status: TicketStatus.open
+
+// ❌ never
+role: "agent"
+status: "open"
+```
+
+Available enums: `Role` (`admin`, `agent`), `TicketStatus` (`open`, `resolved`, `closed`), `TicketCategory` (`general_question`, `technical_question`, `refund_request`).
+
+## Component Testing
+
+### Stack
+- **Runner:** Vitest (`vitest run` / `vitest`)
+- **DOM:** jsdom (configured in `client/vite.config.ts`)
+- **Libraries:** `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom`
+
+### Running tests
+```bash
+bun run test          # run once (CI)
+bun run test:watch    # watch mode
+bun run test:write    # launch Claude to write tests for a component
+```
+All three scripts are in `client/package.json` and must be run from the `client/` directory (or via the workspace root with `--filter`).
+
+### File conventions
+- Test files live next to the component they test: `UsersPage.tsx` → `UsersPage.test.tsx`
+- Shared test utilities live in `client/src/test/`
+
+### Render helper — always use `renderWithQuery`
+Every component test must use `renderWithQuery` from `@/test/utils` instead of RTL's bare `render`. It wraps the component in a fresh `QueryClient` (with `retry: false`) and `MemoryRouter`:
+
+```ts
+import { renderWithQuery } from "@/test/utils";
+
+renderWithQuery(<UsersPage />);
+```
+
+### Mocking conventions
+**axios** — mock the entire module at the top of the test file:
+```ts
+vi.mock("axios", () => ({
+  default: { get: vi.fn(), post: vi.fn(), delete: vi.fn(), isAxiosError: vi.fn() },
+}));
+// In each test:
+vi.mocked(axios.get).mockResolvedValue({ data: [...] });
+vi.mocked(axios.isAxiosError).mockReturnValue(true); // only for error-path tests
+```
+
+**auth-client** — mock `useSession` so the Navbar renders without a real session:
+```ts
+vi.mock("@/lib/auth-client", () => ({
+  authClient: {
+    useSession: vi.fn(() => ({ data: { user: { name: "Admin", role: "admin" } }, isPending: false })),
+    signOut: vi.fn(),
+  },
+}));
+```
+
+Use `vi.resetAllMocks()` in `beforeEach` so implementations don't leak between tests.
+
+### Async queries
+- Use `await screen.findBy*` (not `getBy*`) to wait for data that loads asynchronously.
+- Do not wait on text that also appears in the Navbar (e.g. the logged-in user's name). Wait on values that are unique to the component under test, such as email addresses in a data table.
+- Use `waitFor` when asserting that something disappears after an async action.
+
+### Example reference
+`client/src/pages/UsersPage.test.tsx` — 13 tests covering loading skeleton, success, error, empty state, role-based rendering, modal open/close, form submission, and delete with/without confirmation.
 
 ## Documentation
 
