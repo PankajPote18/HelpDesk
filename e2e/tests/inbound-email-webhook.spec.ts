@@ -39,15 +39,19 @@ function uniqueMessageId(label: string) {
   return `<${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@test.example.com>`;
 }
 
-/** POSTs to the inbound-email webhook. Pass `secret: undefined` to omit the
- * X-Webhook-Secret header entirely (as opposed to sending a wrong value). */
+/** POSTs to the inbound-email webhook. Pass `secret: null` to omit the
+ * X-Webhook-Secret header entirely (as opposed to sending a wrong value).
+ * `null` is used as the omission sentinel rather than `undefined` because
+ * passing `undefined` explicitly is indistinguishable from omitting the
+ * argument — it would still trigger the default parameter and silently send
+ * the real WEBHOOK_SECRET. */
 function postInboundEmail(
   request: APIRequestContext,
   body: Record<string, unknown>,
-  secret: string | undefined = WEBHOOK_SECRET
+  secret: string | null = WEBHOOK_SECRET
 ) {
   return request.post(WEBHOOK_URL, {
-    headers: secret !== undefined ? { "X-Webhook-Secret": secret } : {},
+    headers: secret !== null ? { "X-Webhook-Secret": secret } : {},
     data: body,
   });
 }
@@ -370,7 +374,7 @@ test.describe("Inbound email webhook", () => {
           body: "Should be rejected.",
           messageId: uniqueMessageId("noauth"),
         },
-        undefined
+        null
       );
 
       expect(response.status()).toBe(401);

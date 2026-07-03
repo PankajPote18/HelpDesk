@@ -1,4 +1,12 @@
 import { type Page, test, expect } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
+
+// Needed for the API-level auth-boundary tests below, which hit the Express
+// server directly (bypassing the Vite proxy) the same way
+// e2e/tests/inbound-email-webhook.spec.ts does.
+dotenv.config({ path: path.resolve(__dirname, "../../server/.env.test") });
+const SERVER_URL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
 
 /**
  * Logs in via the UI as the given user and waits for the post-login redirect to '/'.
@@ -31,7 +39,7 @@ test.describe("Authentication", () => {
 
       await expect(page).toHaveURL("/");
       await expect(
-        page.getByRole("heading", { name: "Welcome to Helpdesk" })
+        page.getByRole("heading", { name: "Tickets" })
       ).toBeVisible();
     });
 
@@ -44,7 +52,7 @@ test.describe("Authentication", () => {
 
       await expect(page).toHaveURL("/");
       await expect(
-        page.getByRole("heading", { name: "Welcome to Helpdesk" })
+        page.getByRole("heading", { name: "Tickets" })
       ).toBeVisible();
     });
 
@@ -108,7 +116,7 @@ test.describe("Authentication", () => {
       // refetches and restores the session after reload.
       await expect(page).toHaveURL("/");
       await expect(
-        page.getByRole("heading", { name: "Welcome to Helpdesk" })
+        page.getByRole("heading", { name: "Tickets" })
       ).toBeVisible();
     });
 
@@ -190,7 +198,7 @@ test.describe("Authentication", () => {
       // The ProtectedRoute at '/' then renders normally (session exists).
       await expect(page).toHaveURL("/");
       await expect(
-        page.getByRole("heading", { name: "Welcome to Helpdesk" })
+        page.getByRole("heading", { name: "Tickets" })
       ).toBeVisible();
     });
 
@@ -203,33 +211,38 @@ test.describe("Authentication", () => {
       await expect(page).toHaveURL("/login");
     });
 
-    // The two tests below require custom protected API routes that do not yet
-    // exist in server/src/index.ts. The server currently only has /api/auth/*
-    // (Better Auth) and GET /api/health (unprotected). Activate these tests
-    // once routes protected by requireAuth / requireAdmin are added (e.g.
-    // /api/tickets, /api/users).
+    // /api/users (requireAuth + requireAdmin) and /api/tickets (requireAuth)
+    // now exist, so these two API-level boundary tests are active. The
+    // standalone `request` fixture keeps its own cookie jar across calls made
+    // through it within a single test, so signing in via a raw POST to
+    // /api/auth/sign-in/email and then reusing `request` for the follow-up
+    // call sends the session cookie automatically — no manual header wiring
+    // needed. See Better Auth docs: POST /sign-in/email returns a Set-Cookie
+    // session cookie and { redirect, token, user } on success.
 
-    test.fixme(
-      "agent hitting an admin-only API route directly returns 403",
-      async ({ request }) => {
-        // Suggested implementation once /api/users is wired to requireAdmin:
-        //
-        // 1. Obtain a session cookie for the agent via POST /api/auth/sign-in/email
-        // 2. Include the cookie in the request headers
-        // 3. const response = await request.get("http://localhost:3000/api/users");
-        // 4. expect(response.status()).toBe(403);
-      }
-    );
+    test("agent hitting an admin-only API route directly returns 403", async ({
+      request,
+    }) => {
+      const signInResponse = await request.post(
+        `${SERVER_URL}/api/auth/sign-in/email`,
+        { data: { email: "agent@test.com", password: "TestAgent1!" } }
+      );
+      expect(signInResponse.ok()).toBeTruthy();
 
-    test.fixme(
-      "unauthenticated request to a protected API route returns 401",
-      async ({ request }) => {
-        // Suggested implementation once /api/tickets is wired to requireAuth:
-        //
-        // const response = await request.get("http://localhost:3000/api/tickets");
-        // expect(response.status()).toBe(401);
-      }
-    );
+      const response = await request.get(`${SERVER_URL}/api/users`);
+      expect(response.status()).toBe(403);
+      const payload = await response.json();
+      expect(payload.error).toBe("Forbidden");
+    });
+
+    test("unauthenticated request to a protected API route returns 401", async ({
+      request,
+    }) => {
+      const response = await request.get(`${SERVER_URL}/api/tickets`);
+      expect(response.status()).toBe(401);
+      const payload = await response.json();
+      expect(payload.error).toBe("Unauthorized");
+    });
   });
 
   // ---------------------------------------------------------------------------

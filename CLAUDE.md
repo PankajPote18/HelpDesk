@@ -277,6 +277,25 @@ status: "open"
 
 Available enums: `Role` (`admin`, `agent`), `TicketStatus` (`open`, `resolved`, `closed`), `TicketCategory` (`general_question`, `technical_question`, `refund_request`).
 
+### Client-side enum types
+
+`server/src/generated/prisma/enums.ts` is server-only — the client has no alias to it. Client code must never hardcode raw string-literal unions (e.g. `"open" | "resolved" | "closed"`) to stand in for a Prisma enum. Instead, declare the same value set once as a Zod enum in `core` and infer the union type from it, so both workspaces derive from a single source of truth:
+
+```ts
+// core/src/schemas/ticket.ts
+export const ticketStatusSchema = z.enum(["open", "resolved", "closed"]);
+export type TicketStatus = z.infer<typeof ticketStatusSchema>;
+```
+
+```ts
+// client
+import type { TicketStatus, TicketCategory } from "@helpdesk/core";
+
+type Ticket = { status: TicketStatus; category: TicketCategory | null /* ... */ };
+```
+
+If a new value is added to a Prisma enum, update both `schema.prisma` and the matching `core` schema together — they must stay in sync.
+
 ## Component Testing
 
 ### Stack

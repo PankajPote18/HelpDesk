@@ -5,6 +5,7 @@ import { auth } from "./lib/auth";
 import { requireAuth, requireAdmin } from "./middleware/auth";
 import { requireWebhookSecret } from "./middleware/webhook";
 import usersRouter from "./routes/users";
+import ticketsRouter from "./routes/tickets";
 import inboundEmailRouter from "./routes/inbound-email";
 
 const app = express();
@@ -32,6 +33,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/users", requireAuth, requireAdmin, usersRouter);
+app.use("/api/tickets", requireAuth, ticketsRouter);
 app.use("/api/webhooks/inbound-email", requireWebhookSecret, inboundEmailRouter);
 
 // Express 5 automatically forwards rejected async route promises to next(err).

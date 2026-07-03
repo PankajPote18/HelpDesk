@@ -154,17 +154,19 @@ test.describe("Admin user management", () => {
     await throwawayRow.getByRole("button", { name: "Delete" }).click();
 
     // The confirmation modal appears with the user's name in the body text.
-    await expect(
-      page.getByRole("heading", { name: "Delete user" })
-    ).toBeVisible();
-    await expect(page.getByText(throwawayName)).toBeVisible();
-
-    // --- Step 3: Confirm deletion via the modal's Delete button ---
-    // Scope to the modal card (direct parent of the h2) to avoid targeting
-    // the row-level Delete button that remains in the DOM behind the overlay.
+    // Scope to the modal card (direct parent of the h2) rather than a bare
+    // page-level getByText: once the modal is open, the throwaway user's name
+    // still matches the table cell behind the overlay AND the modal's own
+    // confirmation text, which is a strict-mode violation (2 matches).
     const deleteCard = page
       .getByRole("heading", { name: "Delete user" })
       .locator("xpath=..");
+    await expect(deleteCard).toBeVisible();
+    await expect(deleteCard.getByText(throwawayName)).toBeVisible();
+
+    // --- Step 3: Confirm deletion via the modal's Delete button ---
+    // Scope to the modal card to avoid targeting the row-level Delete button
+    // that remains in the DOM behind the overlay.
     await deleteCard.getByRole("button", { name: "Delete" }).click();
 
     // The row disappears from the table and the modal closes.

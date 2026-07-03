@@ -44,16 +44,31 @@ No shared fixture file exists yet. If multiple spec files need login, extract to
 - Agent (authenticated) visiting `/users` → AdminRoute checks role → `/` (home, not /login)
 - Admin route guard redirects to `/`, NOT `/login`, for non-admins
 
-## Server routes (as of auth.spec.ts authoring)
+## Server routes
 
-Only `/api/auth/*` (Better Auth) and `GET /api/health` (unprotected) exist. No custom protected routes yet.
-API-level 401/403 tests marked `test.fixme()` — activate when `/api/tickets` (requireAuth) or `/api/users` (requireAdmin) are added.
+`/api/auth/*` (Better Auth), `GET /api/health` (unprotected), `/api/tickets` (`requireAuth`, any role),
+`/api/users` (`requireAuth` + `requireAdmin`), `/api/webhooks/inbound-email` (shared-secret header, no session).
+The two API-level 401/403 boundary tests that used to be `test.fixme()` in `auth.spec.ts` ("Role-based access"
+describe block) are now active — see [[e2e-api-auth-testing]] for the implementation pattern.
+
+## HomePage was removed — "/" now renders TicketsPage
+
+As of the tickets-list-page feature, `client/src/pages/HomePage.tsx` no longer exists. `App.tsx` routes `"/"`
+directly to `<ProtectedRoute><TicketsPage /></ProtectedRoute>`. TicketsPage renders a real `<h1>Tickets</h1>`.
+
+**Why it matters:** Several tests across `auth.spec.ts` and `user-management.spec.ts` used to assert
+`page.getByRole("heading", { name: "Welcome to Helpdesk" })` after a redirect to `/` — that heading is gone.
+All such occurrences in `auth.spec.ts` were updated to assert `{ name: "Tickets" }` instead.
+
+**How to apply:** Before writing any new test that lands on `/` post-login/redirect, check `client/src/App.tsx`
+for the current route table rather than assuming HomePage still exists — this is exactly the kind of drift that
+breaks tests silently until the suite is actually run.
 
 ## CardTitle is a `<div>`, not a heading
 
 `client/src/components/ui/card.tsx` renders `CardTitle` as `<div data-slot="card-title">`.
 Use `page.getByText("...")` not `getByRole("heading")` for card titles.
-`<h1>` headings exist on HomePage ("Welcome to Helpdesk") and UsersPage ("Users") — those DO use `getByRole("heading")`.
+`<h1>` headings exist on TicketsPage ("Tickets") and UsersPage ("Users") — those DO use `getByRole("heading")`.
 
 **Why:** Avoids selector failures from assuming semantic heading nesting inside shadcn Card.
 **How to apply:** Always read the card.tsx component before asserting on card titles.
