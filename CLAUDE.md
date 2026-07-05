@@ -183,6 +183,18 @@ bun run test:e2e       # headless
 bun run test:e2e:ui    # interactive UI mode
 ```
 
+### Don't duplicate unit test coverage in e2e tests
+
+Component-level behavior (label text, disabled/error states, title-casing, form validation, dropdown options, "does X call the callback with Y" wiring) belongs in a Vitest component test, not a Playwright spec — it's faster, doesn't need a browser or database, and the component test suite (see Component Testing below) is the source of truth for that logic.
+
+Before adding a Playwright test, check whether a component test already exercises the same behavior with mocked network calls. If so, don't re-assert it in e2e — write the e2e test only for what a component test **cannot** verify:
+- Real backend integration (the request actually round-trips to Postgres and back)
+- Auth/route guards enforced by the server or router (redirects, 401/403)
+- Cross-page navigation flows (e.g. clicking through from a list page to a detail page)
+- Anything spanning more than one page or requiring a real session/cookie
+
+When a page's components already have thorough unit test coverage, the corresponding e2e spec should be short — a handful of tests confirming the wiring works end-to-end, not a re-run of every UI-state assertion already covered by unit tests. Apply this when writing new specs and when extending existing ones; existing specs don't need a retroactive audit unless you're already touching them for another reason.
+
 ## Key Conventions
 
 - All API routes are prefixed with `/api`

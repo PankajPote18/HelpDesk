@@ -22,17 +22,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statusLabels, statusStyles, categoryLabels, formatCategory } from "@/lib/ticket-format";
-
-type Ticket = {
-  id: string;
-  subject: string;
-  status: TicketStatus;
-  category: TicketCategory | null;
-  requesterEmail: string;
-  requesterName: string | null;
-  createdAt: string;
-  assignedTo: { id: string; name: string } | null;
-};
+import type { Ticket } from "@/types/ticket";
 
 type TicketListResponse = {
   tickets: Ticket[];

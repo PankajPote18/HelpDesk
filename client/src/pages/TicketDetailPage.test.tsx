@@ -4,6 +4,7 @@ import axios from "axios";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { TicketDetailPage } from "./TicketDetailPage";
 import { renderWithQuery } from "@/test/utils";
+import type { Ticket } from "@/types/ticket";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -27,27 +28,6 @@ vi.mock("@/lib/auth-client", () => ({
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
-
-type Reply = {
-  id: string;
-  body: string;
-  createdAt: string;
-  author: { id: string; name: string };
-};
-
-type Ticket = {
-  id: string;
-  subject: string;
-  body: string;
-  status: "open" | "resolved" | "closed";
-  category: "general_question" | "technical_question" | "refund_request" | null;
-  requesterEmail: string;
-  requesterName: string | null;
-  createdAt: string;
-  updatedAt: string;
-  assignedTo: { id: string; name: string } | null;
-  replies: Reply[];
-};
 
 const TICKET_ID = "ticket-1";
 

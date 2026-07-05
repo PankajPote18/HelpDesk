@@ -115,7 +115,7 @@ test.describe("Tickets list page", () => {
       await expect(
         row.getByText("Data Buyer <databuyer@example.com>", { exact: true })
       ).toBeVisible();
-      await expect(row.getByText("open", { exact: true })).toBeVisible();
+      await expect(row.getByText("Open", { exact: true })).toBeVisible();
       await expect(row.getByText("Unassigned", { exact: true })).toBeVisible();
 
       // Compare against a date computed inside the browser (same JS engine
