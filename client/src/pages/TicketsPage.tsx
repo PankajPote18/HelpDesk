@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   getCoreRowModel,
@@ -20,6 +21,7 @@ import {
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { statusLabels, statusStyles, categoryLabels, formatCategory } from "@/lib/ticket-format";
 
 type Ticket = {
   id: string;
@@ -40,16 +42,6 @@ type TicketListResponse = {
 };
 
 const PAGE_SIZE = 20;
-
-const statusStyles: Record<TicketStatus, string> = {
-  open: "bg-primary/10 text-primary",
-  resolved: "bg-emerald-500/10 text-emerald-600",
-  closed: "bg-muted text-muted-foreground",
-};
-
-function formatCategory(category: TicketCategory | null) {
-  return category ? category.replace(/_/g, " ") : "Uncategorized";
-}
 
 type FetchTicketsParams = {
   sortBy: TicketSortField;
@@ -83,7 +75,11 @@ const columns: ColumnDef<Ticket>[] = [
     id: "subject",
     header: "Subject",
     accessorKey: "subject",
-    cell: ({ row }) => <span className="font-medium">{row.original.subject}</span>,
+    cell: ({ row }) => (
+      <Link to={`/tickets/${row.original.id}`} className="font-medium hover:underline">
+        {row.original.subject}
+      </Link>
+    ),
   },
   {
     id: "requesterEmail",
@@ -100,7 +96,7 @@ const columns: ColumnDef<Ticket>[] = [
       <span
         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[row.original.status]}`}
       >
-        {row.original.status}
+        {statusLabels[row.original.status]}
       </span>
     ),
   },
@@ -108,7 +104,7 @@ const columns: ColumnDef<Ticket>[] = [
     id: "category",
     header: "Category",
     accessorFn: (ticket) => formatCategory(ticket.category),
-    cell: ({ getValue }) => <span className="text-muted-foreground capitalize">{getValue<string>()}</span>,
+    cell: ({ getValue }) => <span className="text-muted-foreground">{getValue<string>()}</span>,
   },
   {
     id: "assignedTo",
@@ -182,14 +178,14 @@ export function TicketsPage() {
             <option value="">All statuses</option>
             {ticketStatusSchema.options.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {statusLabels[option]}
               </option>
             ))}
           </select>
 
           <select
             aria-label="Filter by category"
-            className={`${selectClassName} capitalize`}
+            className={selectClassName}
             value={category}
             onChange={(e) => {
               setCategory(e.target.value as TicketCategory | "");
@@ -198,8 +194,8 @@ export function TicketsPage() {
           >
             <option value="">All categories</option>
             {ticketCategorySchema.options.map((option) => (
-              <option key={option} value={option} className="capitalize">
-                {formatCategory(option)}
+              <option key={option} value={option}>
+                {categoryLabels[option]}
               </option>
             ))}
           </select>

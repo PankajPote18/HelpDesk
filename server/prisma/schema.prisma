@@ -38,6 +38,7 @@ model User {
   assignedTickets Ticket[]
   sessions        Session[]
   accounts        Account[]
+  ticketReplies   TicketReply[]
 }
 
 model Session {
@@ -94,5 +95,19 @@ model Ticket {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
+  replies TicketReply[]
+
   @@index([requesterEmail])
+}
+
+model TicketReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
 }

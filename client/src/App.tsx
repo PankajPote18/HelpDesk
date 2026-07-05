@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { LoginPage } from "@/pages/LoginPage";
 import { TicketsPage } from "@/pages/TicketsPage";
+import { TicketDetailPage } from "@/pages/TicketDetailPage";
 import { UsersPage } from "@/pages/UsersPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -11,6 +12,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <TicketsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/tickets/:id",
+    element: (
+      <ProtectedRoute>
+        <TicketDetailPage />
       </ProtectedRoute>
     ),
   },

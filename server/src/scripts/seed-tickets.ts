@@ -1,4 +1,4 @@
-import { TicketCategory, TicketStatus } from "../generated/prisma/enums";
+import { TicketCategory, TicketStatus, Role } from "../generated/prisma/enums";
 import { db } from "../lib/db";
 
 type Template = {
@@ -94,7 +94,10 @@ async function seedTickets() {
     return;
   }
 
-  const assignees = await db.user.findMany({ select: { id: true } });
+  const assignees = await db.user.findMany({
+    where: { role: Role.agent, deletedAt: null },
+    select: { id: true },
+  });
 
   const now = Date.now();
   const rows = Array.from({ length: 100 }, (_, i) => {
