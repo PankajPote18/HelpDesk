@@ -114,8 +114,11 @@ router.delete("/:id", async (req, res) => {
     return res.status(400).json({ error: "Admin accounts cannot be deleted" });
   }
 
-  await db.user.update({ where: { id }, data: { deletedAt: new Date() } });
-  await db.session.deleteMany({ where: { userId: id } });
+  await db.$transaction([
+    db.user.update({ where: { id }, data: { deletedAt: new Date() } }),
+    db.session.deleteMany({ where: { userId: id } }),
+    db.ticket.updateMany({ where: { assignedToId: id }, data: { assignedToId: null } }),
+  ]);
 
   res.status(204).send();
 });
