@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "bun run src/scripts/seed.ts",
-    "db:seed-agent": "bun run src/scripts/seed-agent.ts"
+    "db:seed-agent": "bun run src/scripts/seed-agent.ts",
+    "db:seed-tickets": "bun run src/scripts/seed-tickets.ts"
   },
   "dependencies": {
     "@helpdesk/core": "workspace:*",
