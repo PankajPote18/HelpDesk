@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { inboundEmailSchema } from "@helpdesk/core";
 import { db } from "../lib/db";
+import { enqueueClassifyTicket, enqueueAutoResolveTicket } from "../lib/queue";
+import { getAiAgent } from "../lib/ai";
 import { TicketStatus } from "../generated/prisma/enums";
 
 const router = Router();
@@ -53,9 +55,19 @@ router.post("/", async (req, res) => {
     return res.status(200).json({ ticketId: updated.id, status: "appended" });
   }
 
+  const aiAgent = await getAiAgent();
   const created = await db.ticket.create({
-    data: { subject, body, requesterEmail: from, requesterName: fromName ?? null, messageId },
+    data: {
+      subject,
+      body,
+      requesterEmail: from,
+      requesterName: fromName ?? null,
+      messageId,
+      assignedToId: aiAgent.id,
+    },
   });
+  await enqueueClassifyTicket(created.id, subject, body);
+  await enqueueAutoResolveTicket(created.id, subject, body);
   res.status(201).json({ ticketId: created.id, status: "created" });
 });
 

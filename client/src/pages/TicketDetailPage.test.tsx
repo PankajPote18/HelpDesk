@@ -382,4 +382,36 @@ describe("TicketDetailPage", () => {
 
     expect(await screen.findByText("Reply cannot be empty")).toBeInTheDocument();
   });
+
+  // ── Polish reply ──────────────────────────────────────────────────────────
+
+  it("polishes the draft reply", async () => {
+    await renderAndWaitForTicket(BASE_TICKET);
+    vi.mocked(axios.post).mockResolvedValue({ data: { text: "Thank you for reaching out." } });
+    const user = userEvent.setup();
+
+    const textarea = screen.getByLabelText("Add a reply") as HTMLTextAreaElement;
+    await user.type(textarea, "thx for the msg");
+    await user.click(screen.getByRole("button", { name: "Polish" }));
+
+    expect(vi.mocked(axios.post)).toHaveBeenCalledWith(
+      `/api/tickets/${TICKET_ID}/polish-reply`,
+      { body: "thx for the msg" },
+      expect.objectContaining({ withCredentials: true })
+    );
+    await waitFor(() => expect(textarea.value).toBe("Thank you for reaching out."));
+  });
+
+  it("shows an inline error when polishing fails", async () => {
+    await renderAndWaitForTicket(BASE_TICKET);
+    const err = { isAxiosError: true, response: { data: { error: "Failed to polish reply" } } };
+    vi.mocked(axios.post).mockRejectedValue(err);
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText("Add a reply"), "thx for the msg");
+    await user.click(screen.getByRole("button", { name: "Polish" }));
+
+    expect(await screen.findByText("Failed to polish reply")).toBeInTheDocument();
+  });
 });

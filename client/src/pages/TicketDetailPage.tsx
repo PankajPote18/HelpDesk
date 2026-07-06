@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { TicketStatus, TicketCategory } from "@helpdesk/core";
+import type { ManualTicketStatus, TicketCategory } from "@helpdesk/core";
 import { Navbar } from "@/components/Navbar";
 import { ReplyThread } from "@/components/ReplyThread";
 import { TicketDetail } from "@/components/TicketDetail";
@@ -29,7 +29,7 @@ async function assignTicket(id: string, assignedToId: string | null): Promise<Ti
   return data;
 }
 
-async function updateTicketStatus(id: string, status: TicketStatus): Promise<Ticket> {
+async function updateTicketStatus(id: string, status: ManualTicketStatus): Promise<Ticket> {
   const { data } = await axios.patch<Ticket>(
     `/api/tickets/${id}/status`,
     { status },
@@ -50,6 +50,15 @@ async function updateTicketCategory(id: string, category: TicketCategory | null)
 async function createReply(id: string, body: string): Promise<Reply> {
   const { data } = await axios.post<Reply>(
     `/api/tickets/${id}/replies`,
+    { body },
+    { withCredentials: true }
+  );
+  return data;
+}
+
+async function polishReply(id: string, body: string): Promise<{ text: string }> {
+  const { data } = await axios.post<{ text: string }>(
+    `/api/tickets/${id}/polish-reply`,
     { body },
     { withCredentials: true }
   );
@@ -88,7 +97,7 @@ export function TicketDetailPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: (status: TicketStatus) => updateTicketStatus(id!, status),
+    mutationFn: (status: ManualTicketStatus) => updateTicketStatus(id!, status),
     onSuccess: onMutationSuccess,
   });
 
@@ -104,6 +113,10 @@ export function TicketDetailPage() {
         old ? { ...old, replies: [...(old.replies ?? []), reply] } : old
       );
     },
+  });
+
+  const polishMutation = useMutation({
+    mutationFn: (body: string) => polishReply(id!, body),
   });
 
   return (
@@ -166,9 +179,14 @@ export function TicketDetailPage() {
               <ReplyThread
                 replies={replies}
                 onSubmit={(body) => replyMutation.mutateAsync(body)}
+                onPolish={(body) => polishMutation.mutateAsync(body)}
                 isSubmitting={replyMutation.isPending}
+                isPolishing={polishMutation.isPending}
                 errorMessage={
                   replyMutation.isError ? getErrorMessage(replyMutation.error, "Failed to send reply") : null
+                }
+                polishErrorMessage={
+                  polishMutation.isError ? getErrorMessage(polishMutation.error, "Failed to polish reply") : null
                 }
               />
             </CardContent>

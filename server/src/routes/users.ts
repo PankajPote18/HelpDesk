@@ -18,7 +18,7 @@ router.get("/", async (_req, res) => {
 router.post("/", async (req, res) => {
   const result = createUserSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ error: result.error.errors[0].message });
+    return res.status(400).json({ error: result.error.issues[0].message });
   }
 
   const { name, email, password } = result.data;
@@ -61,7 +61,7 @@ router.post("/", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   const result = editUserSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ error: result.error.errors[0].message });
+    return res.status(400).json({ error: result.error.issues[0].message });
   }
 
   const { name, email, password } = result.data;

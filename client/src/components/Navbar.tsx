@@ -21,12 +21,20 @@ export function Navbar() {
             Helpdesk
           </Link>
         {role === "admin" && (
-          <Link
-            to="/users"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Users
-          </Link>
+          <>
+            <Link
+              to="/tickets"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Tickets
+            </Link>
+            <Link
+              to="/users"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Users
+            </Link>
+          </>
         )}
       </div>
       <div className="flex items-center gap-4">

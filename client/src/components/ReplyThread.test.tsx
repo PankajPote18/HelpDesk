@@ -26,17 +26,17 @@ const REPLIES: Reply[] = [
 
 describe("ReplyThread", () => {
   it("shows a placeholder when there are no replies", () => {
-    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} />);
+    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} onPolish={vi.fn()} />);
     expect(screen.getByText("No replies yet.")).toBeInTheDocument();
   });
 
   it("does not show a reply count when there are no replies", () => {
-    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} />);
+    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} onPolish={vi.fn()} />);
     expect(screen.getByText("Replies")).toBeInTheDocument();
   });
 
   it("renders each reply's author, body, and formatted date", () => {
-    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} />);
+    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} onPolish={vi.fn()} />);
 
     expect(screen.getByText("Alice Agent")).toBeInTheDocument();
     expect(screen.getByText("Thanks for reaching out, looking into this.")).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe("ReplyThread", () => {
   });
 
   it("renders replies in the order given (oldest first, as passed in)", () => {
-    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} />);
+    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} onPolish={vi.fn()} />);
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent("Alice Agent");
@@ -54,17 +54,17 @@ describe("ReplyThread", () => {
   });
 
   it("shows the reply count in the heading when there are replies", () => {
-    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} />);
+    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} onPolish={vi.fn()} />);
     expect(screen.getByText("Replies (2)")).toBeInTheDocument();
   });
 
   it("does not show the placeholder once there are replies", () => {
-    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} />);
+    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} onPolish={vi.fn()} />);
     expect(screen.queryByText("No replies yet.")).not.toBeInTheDocument();
   });
 
   it("renders the reply form below the thread", () => {
-    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} />);
+    renderWithQuery(<ReplyThread replies={REPLIES} onSubmit={vi.fn()} onPolish={vi.fn()} />);
     expect(screen.getByLabelText("Add a reply")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send reply" })).toBeInTheDocument();
   });
@@ -72,7 +72,7 @@ describe("ReplyThread", () => {
   it("forwards submission to the onSubmit prop", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
-    renderWithQuery(<ReplyThread replies={[]} onSubmit={onSubmit} />);
+    renderWithQuery(<ReplyThread replies={[]} onSubmit={onSubmit} onPolish={vi.fn()} />);
 
     await user.type(screen.getByLabelText("Add a reply"), "Following up.");
     await user.click(screen.getByRole("button", { name: "Send reply" }));
@@ -81,13 +81,43 @@ describe("ReplyThread", () => {
   });
 
   it("forwards isSubmitting to the reply form", () => {
-    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} isSubmitting />);
+    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} onPolish={vi.fn()} isSubmitting />);
     expect(screen.getByLabelText("Add a reply")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Sending..." })).toBeInTheDocument();
   });
 
   it("forwards errorMessage to the reply form", () => {
-    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} errorMessage="Failed to send reply" />);
+    renderWithQuery(
+      <ReplyThread replies={[]} onSubmit={vi.fn()} onPolish={vi.fn()} errorMessage="Failed to send reply" />
+    );
     expect(screen.getByText("Failed to send reply")).toBeInTheDocument();
+  });
+
+  it("forwards polishing to the reply form", async () => {
+    const onPolish = vi.fn().mockResolvedValue({ text: "Polished." });
+    const user = userEvent.setup();
+    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} onPolish={onPolish} />);
+
+    await user.type(screen.getByLabelText("Add a reply"), "Draft.");
+    await user.click(screen.getByRole("button", { name: "Polish" }));
+
+    expect(onPolish).toHaveBeenCalledWith("Draft.");
+  });
+
+  it("forwards isPolishing to the reply form", () => {
+    renderWithQuery(<ReplyThread replies={[]} onSubmit={vi.fn()} onPolish={vi.fn()} isPolishing />);
+    expect(screen.getByRole("button", { name: "Polishing..." })).toBeInTheDocument();
+  });
+
+  it("forwards polishErrorMessage to the reply form", () => {
+    renderWithQuery(
+      <ReplyThread
+        replies={[]}
+        onSubmit={vi.fn()}
+        onPolish={vi.fn()}
+        polishErrorMessage="Failed to polish reply"
+      />
+    );
+    expect(screen.getByText("Failed to polish reply")).toBeInTheDocument();
   });
 });

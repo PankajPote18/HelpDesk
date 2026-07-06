@@ -4,11 +4,21 @@ import { Button } from "@/components/ui/button";
 
 type ReplyFormProps = {
   onSubmit: (body: string) => Promise<unknown>;
+  onPolish: (body: string) => Promise<{ text: string }>;
   isSubmitting?: boolean;
+  isPolishing?: boolean;
   errorMessage?: string | null;
+  polishErrorMessage?: string | null;
 };
 
-export function ReplyForm({ onSubmit, isSubmitting = false, errorMessage = null }: ReplyFormProps) {
+export function ReplyForm({
+  onSubmit,
+  onPolish,
+  isSubmitting = false,
+  isPolishing = false,
+  errorMessage = null,
+  polishErrorMessage = null,
+}: ReplyFormProps) {
   const [body, setBody] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,6 +35,21 @@ export function ReplyForm({ onSubmit, isSubmitting = false, errorMessage = null 
     }
   };
 
+  const handlePolish = async () => {
+    const trimmed = body.trim();
+    if (!trimmed) return;
+
+    try {
+      const { text } = await onPolish(trimmed);
+      setBody(text);
+    } catch {
+      // Polish failed — keep the draft untouched; the caller surfaces the
+      // error via `polishErrorMessage`.
+    }
+  };
+
+  const disabled = isSubmitting || isPolishing;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
       <label htmlFor="reply-body" className="block text-sm text-muted-foreground">
@@ -34,13 +59,17 @@ export function ReplyForm({ onSubmit, isSubmitting = false, errorMessage = null 
         id="reply-body"
         rows={4}
         value={body}
-        disabled={isSubmitting}
+        disabled={disabled}
         onChange={(e) => setBody(e.target.value)}
         placeholder="Write a reply to the requester..."
       />
+      {polishErrorMessage && <p className="text-xs text-destructive">{polishErrorMessage}</p>}
       {errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
-      <div className="flex justify-end">
-        <Button type="submit" disabled={isSubmitting || !body.trim()}>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" disabled={disabled || !body.trim()} onClick={handlePolish}>
+          {isPolishing ? "Polishing..." : "Polish"}
+        </Button>
+        <Button type="submit" disabled={disabled || !body.trim()}>
           {isSubmitting ? "Sending..." : "Send reply"}
         </Button>
       </div>

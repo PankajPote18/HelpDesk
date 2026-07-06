@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
-import type { TicketStatus, TicketCategory } from "@helpdesk/core";
+import type { TicketStatus, ManualTicketStatus, TicketCategory } from "@helpdesk/core";
 import { UpdateTicket } from "./UpdateTicket";
 import { renderWithQuery } from "@/test/utils";
 import type { Agent } from "@/types/ticket";
@@ -14,7 +14,7 @@ const AGENTS: Agent[] = [
 ];
 
 function baseProps(): {
-  status: { value: TicketStatus; onChange: (v: TicketStatus) => void; isPending?: boolean; errorMessage?: string | null };
+  status: { value: TicketStatus; onChange: (v: ManualTicketStatus) => void; isPending?: boolean; errorMessage?: string | null };
   category: { value: TicketCategory | null; onChange: (v: TicketCategory | null) => void; isPending?: boolean; errorMessage?: string | null };
   assignedTo: { value: string | null; onChange: (v: string | null) => void; isPending?: boolean; errorMessage?: string | null; agents: typeof AGENTS };
 } {

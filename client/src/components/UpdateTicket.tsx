@@ -1,7 +1,8 @@
 import {
-  ticketStatusSchema,
+  manualTicketStatusSchema,
   ticketCategorySchema,
   type TicketStatus,
+  type ManualTicketStatus,
   type TicketCategory,
 } from "@helpdesk/core";
 import { statusLabels, categoryLabels, formatCategory } from "@/lib/ticket-format";
@@ -15,7 +16,12 @@ type FieldState<T> = {
 };
 
 type UpdateTicketProps = {
-  status: FieldState<TicketStatus>;
+  status: {
+    value: TicketStatus;
+    onChange: (value: ManualTicketStatus) => void;
+    isPending?: boolean;
+    errorMessage?: string | null;
+  };
   category: FieldState<TicketCategory | null>;
   assignedTo: FieldState<string | null> & { agents: Agent[] };
 };
@@ -35,9 +41,9 @@ export function UpdateTicket({ status, category, assignedTo }: UpdateTicketProps
           className={selectClassName}
           value={status.value}
           disabled={status.isPending}
-          onChange={(e) => status.onChange(e.target.value as TicketStatus)}
+          onChange={(e) => status.onChange(e.target.value as ManualTicketStatus)}
         >
-          {ticketStatusSchema.options.map((option) => (
+          {manualTicketStatusSchema.options.map((option) => (
             <option key={option} value={option}>
               {statusLabels[option]}
             </option>

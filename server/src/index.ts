@@ -4,9 +4,11 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
 import { requireAuth, requireAdmin } from "./middleware/auth";
 import { requireWebhookSecret } from "./middleware/webhook";
+import { startQueue } from "./lib/queue";
 import usersRouter from "./routes/users";
 import ticketsRouter from "./routes/tickets";
 import inboundEmailRouter from "./routes/inbound-email";
+import dashboardRouter from "./routes/dashboard";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -34,6 +36,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/users", requireAuth, requireAdmin, usersRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);
+app.use("/api/dashboard", requireAuth, requireAdmin, dashboardRouter);
 app.use("/api/webhooks/inbound-email", requireWebhookSecret, inboundEmailRouter);
 
 // Express 5 automatically forwards rejected async route promises to next(err).
@@ -48,6 +51,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 async function main() {
+  await startQueue();
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });

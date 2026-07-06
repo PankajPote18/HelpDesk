@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { generateText } from "ai";
 import type { Prisma } from "../generated/prisma/client";
 import {
   ticketListQuerySchema,
@@ -6,9 +7,11 @@ import {
   updateTicketStatusSchema,
   updateTicketCategorySchema,
   createTicketReplySchema,
+  polishTicketReplySchema,
 } from "@helpdesk/core";
-import { Role } from "../generated/prisma/enums";
+import { Role, TicketStatus } from "../generated/prisma/enums";
 import { db } from "../lib/db";
+import { polishModel } from "../lib/ai";
 
 const router = Router();
 
@@ -37,7 +40,7 @@ const ticketDetailSelect = {
 router.get("/", async (req, res) => {
   const result = ticketListQuerySchema.safeParse(req.query);
   if (!result.success) {
-    return res.status(400).json({ error: result.error.errors[0].message });
+    return res.status(400).json({ error: result.error.issues[0].message });
   }
   const { sortBy, sortOrder, status, category, page, pageSize } = result.data;
 
@@ -47,7 +50,7 @@ router.get("/", async (req, res) => {
       : { [sortBy]: sortOrder };
 
   const where: Prisma.TicketWhereInput = {
-    ...(status && { status }),
+    status: status ?? { notIn: [TicketStatus.new, TicketStatus.processing] },
     ...(category && { category }),
   };
 
@@ -99,7 +102,7 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id/assign", async (req, res) => {
   const result = assignTicketSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ error: result.error.errors[0].message });
+    return res.status(400).json({ error: result.error.issues[0].message });
   }
   const { assignedToId } = result.data;
 
@@ -129,7 +132,7 @@ router.patch("/:id/assign", async (req, res) => {
 router.patch("/:id/status", async (req, res) => {
   const result = updateTicketStatusSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ error: result.error.errors[0].message });
+    return res.status(400).json({ error: result.error.issues[0].message });
   }
 
   const ticket = await db.ticket.findUnique({ where: { id: req.params.id } });
@@ -139,7 +142,10 @@ router.patch("/:id/status", async (req, res) => {
 
   const updated = await db.ticket.update({
     where: { id: req.params.id },
-    data: { status: result.data.status },
+    data: {
+      status: result.data.status,
+      ...(result.data.status === TicketStatus.resolved && { resolvedAt: new Date() }),
+    },
     select: ticketDetailSelect,
   });
 
@@ -149,7 +155,7 @@ router.patch("/:id/status", async (req, res) => {
 router.patch("/:id/category", async (req, res) => {
   const result = updateTicketCategorySchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ error: result.error.errors[0].message });
+    return res.status(400).json({ error: result.error.issues[0].message });
   }
 
   const ticket = await db.ticket.findUnique({ where: { id: req.params.id } });
@@ -169,7 +175,7 @@ router.patch("/:id/category", async (req, res) => {
 router.post("/:id/replies", async (req, res) => {
   const result = createTicketReplySchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ error: result.error.errors[0].message });
+    return res.status(400).json({ error: result.error.issues[0].message });
   }
 
   const ticket = await db.ticket.findUnique({ where: { id: req.params.id } });
@@ -192,6 +198,39 @@ router.post("/:id/replies", async (req, res) => {
   });
 
   res.status(201).json(reply);
+});
+
+router.post("/:id/polish-reply", async (req, res) => {
+  const result = polishTicketReplySchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error.issues[0].message });
+  }
+
+  const ticket = await db.ticket.findUnique({
+    where: { id: req.params.id },
+    select: { subject: true, requesterName: true },
+  });
+  if (!ticket) {
+    return res.status(404).json({ error: "Ticket not found" });
+  }
+
+  const agentName = res.locals.session.user.name;
+
+  const { text } = await generateText({
+    model: polishModel,
+    system:
+      "You are a helpdesk writing assistant. Improve the clarity, grammar, and tone of a support " +
+      "agent's draft reply to a customer. Keep the meaning and every factual detail unchanged. " +
+      "Address the customer by their name at the start of the reply, and sign off with the agent's " +
+      "name at the end. Respond with only the polished reply text — no preamble, no quotes, no explanation.",
+    prompt:
+      `Ticket subject: ${ticket.subject}\n` +
+      `Customer name: ${ticket.requesterName}\n` +
+      `Agent name: ${agentName}\n\n` +
+      `Draft reply:\n${result.data.body}`,
+  });
+
+  res.json({ text });
 });
 
 export default router;

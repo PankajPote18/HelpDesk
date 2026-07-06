@@ -11,9 +11,9 @@ import {
 } from "@tanstack/react-table";
 import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 import {
-  ticketStatusSchema,
+  manualTicketStatusSchema,
   ticketCategorySchema,
-  type TicketStatus,
+  type ManualTicketStatus,
   type TicketCategory,
   type TicketSortField,
   type TicketSortOrder,
@@ -36,7 +36,7 @@ const PAGE_SIZE = 20;
 type FetchTicketsParams = {
   sortBy: TicketSortField;
   sortOrder: TicketSortOrder;
-  status: TicketStatus | "";
+  status: ManualTicketStatus | "";
   category: TicketCategory | "";
   page: number;
 };
@@ -117,7 +117,7 @@ const selectClassName =
 
 export function TicketsPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
-  const [status, setStatus] = useState<TicketStatus | "">("");
+  const [status, setStatus] = useState<ManualTicketStatus | "">("");
   const [category, setCategory] = useState<TicketCategory | "">("");
   const [page, setPage] = useState(1);
 
@@ -161,12 +161,12 @@ export function TicketsPage() {
             className={selectClassName}
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value as TicketStatus | "");
+              setStatus(e.target.value as ManualTicketStatus | "");
               setPage(1);
             }}
           >
             <option value="">All statuses</option>
-            {ticketStatusSchema.options.map((option) => (
+            {manualTicketStatusSchema.options.map((option) => (
               <option key={option} value={option}>
                 {statusLabels[option]}
               </option>
