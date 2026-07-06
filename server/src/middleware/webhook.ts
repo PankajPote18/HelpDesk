@@ -5,7 +5,10 @@ export function requireWebhookSecret(req: Request, res: Response, next: NextFunc
   if (!expected) {
     return res.status(500).json({ error: "Webhook secret is not configured" });
   }
-  if (req.header("X-Webhook-Secret") !== expected) {
+  // SendGrid's Inbound Parse webhook can't set custom headers, so the secret must also be
+  // accepted as a query param on the configured URL (e.g. .../inbound-email?secret=...).
+  const provided = req.header("X-Webhook-Secret") ?? (typeof req.query.secret === "string" ? req.query.secret : undefined);
+  if (provided !== expected) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();

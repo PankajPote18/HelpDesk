@@ -12,6 +12,7 @@ import {
 import { Role, TicketStatus } from "../generated/prisma/enums";
 import { db } from "../lib/db";
 import { polishModel } from "../lib/ai";
+import { enqueueSendReplyEmail } from "../lib/queue";
 
 const router = Router();
 
@@ -196,6 +197,8 @@ router.post("/:id/replies", async (req, res) => {
       author: { select: { id: true, name: true } },
     },
   });
+
+  await enqueueSendReplyEmail(ticket.requesterEmail, ticket.subject, result.data.body);
 
   res.status(201).json(reply);
 });

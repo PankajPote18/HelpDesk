@@ -6,6 +6,7 @@ import { z } from "zod";
 import { ticketCategorySchema, type TicketCategory } from "@helpdesk/core";
 import { TicketStatus } from "../generated/prisma/enums";
 import { db } from "./db";
+import { sendTicketReplyEmail } from "./mailer";
 
 export const polishModel = google("gemini-2.5-flash-lite");
 const classifyModel = google("gemini-2.5-flash-lite");
@@ -62,7 +63,7 @@ export function getAiAgent() {
 }
 
 export async function autoResolveTicket(ticketId: string, subject: string, body: string): Promise<void> {
-  await db.ticket.update({ where: { id: ticketId }, data: { status: TicketStatus.processing } });
+  const ticket = await db.ticket.update({ where: { id: ticketId }, data: { status: TicketStatus.processing } });
 
   let canResolve = false;
   let answer = "";
@@ -81,6 +82,7 @@ export async function autoResolveTicket(ticketId: string, subject: string, body:
         data: { status: TicketStatus.resolved, resolvedAt: new Date() },
       }),
     ]);
+    await sendTicketReplyEmail(ticket.requesterEmail, subject, answer);
   } else {
     await db.ticket.update({
       where: { id: ticketId },

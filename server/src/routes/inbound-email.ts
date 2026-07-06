@@ -1,4 +1,6 @@
 import { Router } from "express";
+import multer from "multer";
+import Parse from "@sendgrid/inbound-mail-parser";
 import { inboundEmailSchema } from "@helpdesk/core";
 import { db } from "../lib/db";
 import { enqueueClassifyTicket, enqueueAutoResolveTicket } from "../lib/queue";
@@ -6,6 +8,7 @@ import { getAiAgent } from "../lib/ai";
 import { TicketStatus } from "../generated/prisma/enums";
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 function normalizeSubject(subject: string): string {
   let s = subject.trim();
@@ -17,8 +20,39 @@ function normalizeSubject(subject: string): string {
   return s.toLowerCase();
 }
 
-router.post("/", async (req, res) => {
-  const result = inboundEmailSchema.safeParse(req.body);
+// SendGrid's `from` field looks like `"Jane Doe" <jane@example.com>` or a bare address.
+function parseFromField(from: string): { email: string; name?: string } {
+  const match = from.match(/^"?([^"<]*)"?\s*<([^>]+)>\s*$/);
+  if (!match) {
+    return { email: from.trim() };
+  }
+  const name = match[1].trim();
+  return { email: match[2].trim(), name: name.length > 0 ? name : undefined };
+}
+
+// SendGrid ships the MIME headers as one raw string field; pull the header we need out of it.
+function extractHeader(headers: string, name: string): string | undefined {
+  const match = headers.match(new RegExp(`^${name}:\\s*(.+)$`, "im"));
+  return match?.[1]?.trim().replace(/^<(.+)>$/, "$1");
+}
+
+router.post("/", upload.any(), async (req, res) => {
+  const parsed = new Parse(
+    { keys: ["from", "subject", "text", "html", "headers"] },
+    { body: req.body, files: Array.isArray(req.files) ? req.files : [] }
+  ).keyValues();
+
+  const fromField = typeof parsed.from === "string" ? parseFromField(parsed.from) : undefined;
+  const headers = typeof parsed.headers === "string" ? parsed.headers : "";
+
+  const result = inboundEmailSchema.safeParse({
+    from: fromField?.email ?? "",
+    fromName: fromField?.name,
+    subject: parsed.subject ?? "",
+    body: parsed.text ?? parsed.html ?? "",
+    messageId: extractHeader(headers, "Message-ID"),
+    inReplyTo: extractHeader(headers, "In-Reply-To"),
+  });
   if (!result.success) {
     return res.status(400).json({ error: result.error.issues[0].message });
   }

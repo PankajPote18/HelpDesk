@@ -13,8 +13,13 @@ mock.module("../lib/db", () => ({ db: { ticket: { findUnique: findUniqueMock } }
 mock.module("../lib/ai", () => ({
   polishModel: "mock-model",
   getAiAgent: mock(async () => ({ id: "ai-agent-1", name: "AI" })),
+  classifyTicket: mock(async () => {}),
+  autoResolveTicket: mock(async () => {}),
 }));
 mock.module("ai", () => ({ generateText: generateTextMock }));
+mock.module("../lib/queue", () => ({
+  enqueueSendReplyEmail: mock(async () => {}),
+}));
 
 const { default: ticketsRouter } = await import("./tickets");
 

@@ -10,3 +10,6 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/helpdesk?schema=publ
 INBOUND_EMAIL_WEBHOOK_SECRET="replace-with-a-random-32-plus-character-secret"
 
 GOOGLE_GENERATIVE_AI_API_KEY="replace-with-your-google-generative-ai-api-key"
+
+SENDGRID_API_KEY="replace-with-your-sendgrid-api-key"
+SENDGRID_FROM_EMAIL="replace-with-your-sendgrid-verified-sender-email"
