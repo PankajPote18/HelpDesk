@@ -29,9 +29,9 @@ export function ReplyThread({
       {replies.length === 0 ? (
         <p className="text-sm text-muted-foreground">No replies yet.</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="space-y-3">
           {replies.map((reply) => (
-            <li key={reply.id} className="rounded-lg border bg-muted/20 p-4">
+            <li key={reply.id} className="rounded-md border border-l-[3px] border-l-primary/50 bg-card p-4">
               <div className="flex items-center justify-between gap-4 mb-2">
                 <span className="text-sm font-medium">{reply.author.name}</span>
                 <span className="text-xs text-muted-foreground">

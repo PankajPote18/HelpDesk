@@ -1,4 +1,8 @@
+// Must be imported before any other module so Sentry can instrument them.
+import "./instrument";
+
 import express, { type NextFunction, type Request, type Response } from "express";
+import * as Sentry from "@sentry/node";
 import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
@@ -38,6 +42,9 @@ app.use("/api/users", requireAuth, requireAdmin, usersRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);
 app.use("/api/dashboard", requireAuth, requireAdmin, dashboardRouter);
 app.use("/api/webhooks/inbound-email", requireWebhookSecret, inboundEmailRouter);
+
+// Must be registered after all routes but before any other error-handling middleware.
+Sentry.setupExpressErrorHandler(app);
 
 // Express 5 automatically forwards rejected async route promises to next(err).
 // This handler ensures those errors are returned as JSON rather than HTML.

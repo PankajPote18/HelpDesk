@@ -66,7 +66,10 @@ const columns: ColumnDef<Ticket>[] = [
     header: "Subject",
     accessorKey: "subject",
     cell: ({ row }) => (
-      <Link to={`/tickets/${row.original.id}`} className="font-medium hover:underline">
+      <Link
+        to={`/tickets/${row.original.id}`}
+        className="font-serif text-[0.95rem] font-semibold text-foreground hover:text-primary transition-colors"
+      >
         {row.original.subject}
       </Link>
     ),

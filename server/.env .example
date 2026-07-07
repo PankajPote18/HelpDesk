@@ -13,3 +13,7 @@ GOOGLE_GENERATIVE_AI_API_KEY="replace-with-your-google-generative-ai-api-key"
 
 SENDGRID_API_KEY="replace-with-your-sendgrid-api-key"
 SENDGRID_FROM_EMAIL="replace-with-your-sendgrid-verified-sender-email"
+
+# Leave blank to disable Sentry error reporting (e.g. in local dev).
+SENTRY_DSN="replace-with-your-sentry-dsn"
+SENTRY_ENVIRONMENT="development"

@@ -9,10 +9,10 @@ export const statusLabels: Record<TicketStatus, string> = {
 };
 
 export const statusStyles: Record<TicketStatus, string> = {
-  new: "bg-sky-500/10 text-sky-600",
-  processing: "bg-amber-500/10 text-amber-600",
+  new: "bg-[#b14a2e]/10 text-[#b14a2e]",
+  processing: "bg-[#b8862e]/10 text-[#b8862e]",
   open: "bg-primary/10 text-primary",
-  resolved: "bg-emerald-500/10 text-emerald-600",
+  resolved: "bg-[#2e9b6b]/10 text-[#2e9b6b]",
   closed: "bg-muted text-muted-foreground",
 };
 

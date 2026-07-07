@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
 import type { ManualTicketStatus, TicketCategory } from "@helpdesk/core";
 import { Navbar } from "@/components/Navbar";
 import { ReplyThread } from "@/components/ReplyThread";
@@ -123,8 +124,11 @@ export function TicketDetailPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          &larr; Back to tickets
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to tickets
         </Link>
 
         {isLoading && (

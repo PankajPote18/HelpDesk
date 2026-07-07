@@ -2,8 +2,14 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import axios from "axios";
+import * as Sentry from "@sentry/react";
 import "./index.css";
 import App from "./App";
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE,
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,8 +28,10 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <Sentry.ErrorBoundary fallback={<p>Something went wrong. Please refresh the page.</p>}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </Sentry.ErrorBoundary>
   </StrictMode>
 );

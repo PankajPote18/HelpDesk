@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
@@ -65,13 +66,22 @@ export function ReplyForm({
       />
       {polishErrorMessage && <p className="text-xs text-destructive">{polishErrorMessage}</p>}
       {errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" disabled={disabled || !body.trim()} onClick={handlePolish}>
-          {isPolishing ? "Polishing..." : "Polish"}
-        </Button>
-        <Button type="submit" disabled={disabled || !body.trim()}>
-          {isSubmitting ? "Sending..." : "Send reply"}
-        </Button>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Polish tightens tone and clarity — your words stay yours.</p>
+        <div className="flex gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            className="text-primary border-primary/30 hover:bg-primary/5 hover:text-primary"
+            disabled={disabled || !body.trim()}
+            onClick={handlePolish}
+          >
+            <Sparkles /> {isPolishing ? "Polishing..." : "Polish"}
+          </Button>
+          <Button type="submit" disabled={disabled || !body.trim()}>
+            {isSubmitting ? "Sending..." : "Send reply"}
+          </Button>
+        </div>
       </div>
     </form>
   );
