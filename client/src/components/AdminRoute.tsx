@@ -24,7 +24,7 @@ export function AdminRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  const user = session?.user as (typeof session.user & UserWithRole) | undefined;
+  const user = session?.user as UserWithRole | undefined;
 
   if (!session || user?.role !== "admin") {
     return <Navigate to="/" replace />;

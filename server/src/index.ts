@@ -1,6 +1,7 @@
 // Must be imported before any other module so Sentry can instrument them.
 import "./instrument";
 
+import path from "path";
 import express, { type NextFunction, type Request, type Response } from "express";
 import * as Sentry from "@sentry/node";
 import cors from "cors";
@@ -38,6 +39,17 @@ app.use("/api/users", requireAuth, requireAdmin, usersRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);
 app.use("/api/dashboard", requireAuth, requireAdmin, dashboardRouter);
 app.use("/api/webhooks/inbound-email", requireWebhookSecret, inboundEmailRouter);
+
+// Single-service deploy: this server also serves the client's built static
+// assets, since Railway runs one service for the whole monorepo rather than
+// separate client/server deployments.
+if (process.env.NODE_ENV === "production") {
+  const clientDist = path.join(import.meta.dir, "../../client/dist");
+  app.use(express.static(clientDist));
+  app.get(/^\/(?!api).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 // Must be registered after all routes but before any other error-handling middleware.
 Sentry.setupExpressErrorHandler(app);

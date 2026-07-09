@@ -4,7 +4,8 @@
   "workspaces": ["core", "server", "client"],
   "scripts": {
     "dev": "bun run --filter '*' dev",
-    "build": "bun run --filter 'client' build && bun run --filter 'server' build",
+    "build": "bun run --filter '@helpdesk/client' build && bun run --filter '@helpdesk/server' build",
+    "start": "bun run --filter '@helpdesk/server' start",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
