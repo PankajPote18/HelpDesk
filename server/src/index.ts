@@ -6,6 +6,7 @@ import * as Sentry from "@sentry/node";
 import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
+import { corsOrigins } from "./lib/origins";
 import { requireAuth, requireAdmin } from "./middleware/auth";
 import { requireWebhookSecret } from "./middleware/webhook";
 import { startQueue } from "./lib/queue";
@@ -17,14 +18,9 @@ import dashboardRouter from "./routes/dashboard";
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-];
-
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: corsOrigins,
     credentials: true,
   })
 );
