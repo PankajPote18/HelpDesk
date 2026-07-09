@@ -17,7 +17,15 @@ import inboundEmailRouter from "./routes/inbound-email";
 import dashboardRouter from "./routes/dashboard";
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
+const PORT = Number(process.env.PORT ?? 3000);
+
+console.log(`[startup] NODE_ENV: ${process.env.NODE_ENV ?? "(unset)"}`);
+console.log(`[startup] PORT: ${PORT}`);
+
+app.use((req, _res, next) => {
+  console.log(`[request] ${req.method} ${req.path}`);
+  next();
+});
 
 app.use(
   cors({
@@ -34,6 +42,14 @@ app.use(express.json());
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// Diagnostic root route for non-production environments — production serves
+// the built client SPA at "/" instead (see the static-serving block below).
+if (process.env.NODE_ENV !== "production") {
+  app.get("/", (_req, res) => {
+    res.json({ status: "ok", message: "Helpdesk API is running" });
+  });
+}
 
 app.use("/api/users", requireAuth, requireAdmin, usersRouter);
 app.use("/api/tickets", requireAuth, ticketsRouter);
@@ -65,14 +81,25 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ error: message });
 });
 
+process.on("unhandledRejection", (reason) => {
+  console.error("[fatal] Unhandled promise rejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[fatal] Uncaught exception:", err);
+});
+
 async function main() {
+  console.log("[startup] Starting queue...");
   await startQueue();
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  console.log("[startup] Queue started. Binding HTTP server...");
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[startup] Server listening on 0.0.0.0:${PORT}`);
   });
 }
 
 main().catch((err) => {
-  console.error("Failed to start server:", err);
+  console.error("[fatal] Failed to start server:", err);
   process.exit(1);
 });
