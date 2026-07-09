@@ -1,6 +1,7 @@
 import { PgBoss } from "pg-boss";
 import { classifyTicket, autoResolveTicket } from "./ai";
 import { sendTicketReplyEmail } from "./mailer";
+import { databaseUrl } from "./database-url";
 
 export const CLASSIFY_TICKET_QUEUE = "classify-ticket";
 export const AUTO_RESOLVE_TICKET_QUEUE = "auto-resolve-ticket";
@@ -10,7 +11,7 @@ type ClassifyTicketJob = { ticketId: string; subject: string; body: string };
 type AutoResolveTicketJob = { ticketId: string; subject: string; body: string };
 type SendReplyEmailJob = { to: string; subject: string; body: string };
 
-export const boss = new PgBoss(process.env.DATABASE_URL!);
+export const boss = new PgBoss(databaseUrl);
 
 boss.on("error", (err) => console.error("pg-boss error:", err));
 
