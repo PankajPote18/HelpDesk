@@ -58,6 +58,23 @@ const templates: Template[] = [
   { subject: "Quick question", body: "Quick one for the team when you get a chance — nothing urgent.", category: null },
 ];
 
+const replyTemplates = [
+  "Thanks for reaching out — I've taken a look and I'm digging into this now. I'll update you as soon as I have more information.",
+  "Appreciate your patience here. I was able to reproduce this on our end and have escalated it to the right team.",
+  "Just to confirm — I've applied the fix/adjustment on our side. Could you check and let us know if everything looks correct now?",
+  "Following up on this one: I've double-checked our records and everything should be resolved. Let us know if you still see any issues.",
+  "Sorry for the trouble this has caused. I've gone ahead and processed this for you — you should see it reflected within 24 hours.",
+  "Good news — this has been fixed and deployed. Let me know if you run into anything else.",
+];
+
+const extraAgents = [
+  { name: "Maya Alvarez", email: "maya.alvarez@helpdesk.internal" },
+  { name: "Jordan Kim", email: "jordan.kim@helpdesk.internal" },
+  { name: "Priya Raman", email: "priya.raman@helpdesk.internal" },
+  { name: "Tom Bergström", email: "tom.bergstrom@helpdesk.internal" },
+  { name: "Aisha Bello", email: "aisha.bello@helpdesk.internal" },
+];
+
 const firstNames = [
   "Olivia", "Liam", "Emma", "Noah", "Ava",
   "Ethan", "Sophia", "Mason", "Isabella", "Lucas",
@@ -73,7 +90,11 @@ const domains = [
   "brightlabs.io", "northwind.dev", "gridlyapp.com", "vertexstudio.co",
 ];
 
+// Weighted so open/resolved/closed (the "worked" states) are most common,
+// but new/processing (freshly-arrived, not yet triaged) are represented too.
 const statusPool: TicketStatus[] = [
+  ...Array(2).fill(TicketStatus.new),
+  ...Array(1).fill(TicketStatus.processing),
   ...Array(4).fill(TicketStatus.open),
   ...Array(4).fill(TicketStatus.resolved),
   ...Array(2).fill(TicketStatus.closed),
@@ -87,6 +108,25 @@ function pick<T>(arr: T[], seed: number): T {
   return arr[hash(seed) % arr.length];
 }
 
+async function seedExtraAgents(): Promise<void> {
+  const now = new Date();
+  for (const agent of extraAgents) {
+    const existing = await db.user.findUnique({ where: { email: agent.email } });
+    if (existing) continue;
+    await db.user.create({
+      data: {
+        email: agent.email,
+        name: agent.name,
+        emailVerified: true,
+        role: Role.agent,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
+  console.log(`Ensured ${extraAgents.length} demo agents exist.`);
+}
+
 async function seedTickets() {
   const alreadySeeded = await db.ticket.count({ where: { messageId: { startsWith: "<seed-" } } });
   if (alreadySeeded > 0) {
@@ -94,13 +134,17 @@ async function seedTickets() {
     return;
   }
 
+  await seedExtraAgents();
+
   const assignees = await db.user.findMany({
     where: { role: Role.agent, deletedAt: null },
     select: { id: true },
   });
 
   const now = Date.now();
-  const rows = Array.from({ length: 100 }, (_, i) => {
+  const TICKET_COUNT = 150;
+
+  const rows = Array.from({ length: TICKET_COUNT }, (_, i) => {
     const template = templates[i % templates.length];
     const first = firstNames[i % firstNames.length];
     const last = lastNames[Math.floor(i / firstNames.length) % lastNames.length];
@@ -113,10 +157,13 @@ async function seedTickets() {
     const createdAt = new Date(now - daysAgo * 24 * 60 * 60 * 1000 - hoursAgo * 60 * 60 * 1000);
 
     const status = pick(statusPool, i * 5 + 2);
-    const assignedToId =
-      status !== TicketStatus.open && assignees.length > 0
-        ? pick(assignees, i * 3 + 1).id
-        : null;
+    const isWorked = status === TicketStatus.open || status === TicketStatus.resolved || status === TicketStatus.closed;
+    const assignedToId = isWorked && assignees.length > 0 ? pick(assignees, i * 3 + 1).id : null;
+
+    const isResolvedLike = status === TicketStatus.resolved || status === TicketStatus.closed;
+    const resolvedAt = isResolvedLike
+      ? new Date(createdAt.getTime() + ((i * 19 + 3) % 72) * 60 * 60 * 1000)
+      : null;
 
     return {
       subject: template.subject,
@@ -128,11 +175,44 @@ async function seedTickets() {
       messageId: `<seed-${i}-${Date.now()}@helpdesk.local>`,
       assignedToId,
       createdAt,
+      resolvedAt,
     };
   });
 
   await db.ticket.createMany({ data: rows });
   console.log(`Seeded ${rows.length} tickets.`);
+
+  const created = await db.ticket.findMany({
+    where: { messageId: { in: rows.map((r) => r.messageId) } },
+    select: { id: true, status: true, assignedToId: true, createdAt: true, messageId: true },
+  });
+
+  const replyRows: { ticketId: string; authorId: string; body: string; createdAt: Date }[] = [];
+  for (const ticket of created) {
+    if (!ticket.assignedToId) continue;
+    const seedIndex = Number(ticket.messageId?.match(/<seed-(\d+)-/)?.[1] ?? 0);
+
+    const isResolvedLike = ticket.status === TicketStatus.resolved || ticket.status === TicketStatus.closed;
+    // Resolved/closed tickets always got a reply; ~40% of open tickets have
+    // an initial acknowledgement but no resolution yet.
+    const shouldReply = isResolvedLike || (ticket.status === TicketStatus.open && seedIndex % 5 < 2);
+    if (!shouldReply) continue;
+
+    const replyCount = isResolvedLike ? 1 + (seedIndex % 3) : 1;
+    for (let r = 0; r < replyCount; r++) {
+      replyRows.push({
+        ticketId: ticket.id,
+        authorId: ticket.assignedToId,
+        body: pick(replyTemplates, seedIndex * 11 + r * 31),
+        createdAt: new Date(ticket.createdAt.getTime() + (r + 1) * 3 * 60 * 60 * 1000),
+      });
+    }
+  }
+
+  if (replyRows.length > 0) {
+    await db.ticketReply.createMany({ data: replyRows });
+  }
+  console.log(`Seeded ${replyRows.length} ticket replies.`);
 }
 
 seedTickets()
