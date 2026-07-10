@@ -66,7 +66,7 @@ export function ReplyForm({
       />
       {polishErrorMessage && <p className="text-xs text-destructive">{polishErrorMessage}</p>}
       {errorMessage && <p className="text-xs text-destructive">{errorMessage}</p>}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <p className="text-xs text-muted-foreground">Polish tightens tone and clarity — your words stay yours.</p>
         <div className="flex gap-2 shrink-0">
           <Button

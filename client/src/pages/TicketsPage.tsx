@@ -153,12 +153,12 @@ export function TicketsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-5xl mx-auto px-6 py-12">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold">Tickets</h1>
         </div>
 
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
           <select
             aria-label="Filter by status"
             className={selectClassName}
@@ -195,7 +195,7 @@ export function TicketsPage() {
         </div>
 
         {isLoading && (
-          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
@@ -230,7 +230,7 @@ export function TicketsPage() {
 
         {!isLoading && !fetchError && (
           <>
-            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -276,7 +276,7 @@ export function TicketsPage() {
               </table>
             </div>
 
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
               <p className="text-sm text-muted-foreground">
                 {total === 0 ? "0 results" : `Page ${page} of ${totalPages} — ${total} results`}
               </p>

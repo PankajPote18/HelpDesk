@@ -9,11 +9,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (isPending) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="border-b px-6 py-3 flex items-center justify-between">
+        <div className="border-b px-4 sm:px-6 py-3 flex items-center justify-between">
           <Skeleton className="h-6 w-24" />
           <Skeleton className="h-8 w-20" />
         </div>
-        <div className="max-w-4xl mx-auto px-6 py-12 space-y-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-4">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-72" />
           <Skeleton className="h-4 w-60" />

@@ -110,14 +110,14 @@ export function UsersPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="flex items-center justify-between mb-8">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
           <h1 className="text-2xl font-bold">Users</h1>
           <Button onClick={openCreateModal}>Create user</Button>
         </div>
 
         {isLoading && (
-          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
@@ -150,7 +150,7 @@ export function UsersPage() {
         )}
 
         {!isLoading && !fetchError && (
-          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
@@ -217,10 +217,10 @@ export function UsersPage() {
       {/* Create modal */}
       {showCreateModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowCreateModal(false); }}
         >
-          <div className="bg-card rounded-xl border shadow-lg w-full max-w-md mx-4 p-6">
+          <div className="bg-card rounded-xl border shadow-lg w-full max-w-md my-auto p-6">
             <h2 className="text-lg font-semibold mb-1">Create agent</h2>
             <p className="text-sm text-muted-foreground mb-5">
               New users are created with the agent role.
@@ -268,10 +268,10 @@ export function UsersPage() {
       {/* Edit modal */}
       {editingUser && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setEditingUser(null); }}
         >
-          <div className="bg-card rounded-xl border shadow-lg w-full max-w-md mx-4 p-6">
+          <div className="bg-card rounded-xl border shadow-lg w-full max-w-md my-auto p-6">
             <h2 className="text-lg font-semibold mb-1">Edit user</h2>
             <p className="text-sm text-muted-foreground mb-5">
               Leave the password field empty to keep the current password.
@@ -322,10 +322,10 @@ export function UsersPage() {
       {/* Delete confirmation modal */}
       {userToDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setUserToDelete(null); }}
         >
-          <div className="bg-card rounded-xl border shadow-lg w-full max-w-sm mx-4 p-6">
+          <div className="bg-card rounded-xl border shadow-lg w-full max-w-sm my-auto p-6">
             <h2 className="text-lg font-semibold mb-2">Delete user</h2>
             <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to deactivate{" "}
